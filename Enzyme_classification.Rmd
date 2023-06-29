@@ -1,5 +1,5 @@
 ---
-title: "☣️Enzyme multi-label classification"
+title: "☣️ Enzyme multi-label classification"
 author: "Arindam Baruah"
 date: "2023-06-13"
 output:
@@ -18,6 +18,8 @@ knitr::opts_chunk$set(echo = TRUE,
 
 
 # Introduction
+
+![](https://y9s5q4c4.stackpathcdn.com/wp-content/uploads/2021/07/enzymology-1.png)
 
 <div class="warning" style='background-color:#E9D8FD; color: #69337A; border-left: solid #805AD5 4px; border-radius: 4px; padding:0.7em;'>
 <span>
@@ -38,7 +40,7 @@ EC1 represents the class of enzymes known as oxidoreductases. These enzymes cata
 
 First, we import the required libraries which we will use to perform the current analysis.
 
-```{r}
+```{r libraries}
 library(tidyverse)
 library(naniar)
 library(bookdown)
@@ -147,8 +149,99 @@ We can observe that there are multiple process parameters present in the dataset
 
 32. __fr_COO2__ : Similar to fr_COO, fr_COO2 represents the number of carboxyl (COO) functional groups, ranging from 0 to 8.
 
-33. __EC1__ : EC1 is a binary feature representing a predicted label related to Oxidoreductases. It serves as one of the target variables for prediction.
+33. __EC1__ : EC1 is a binary feature representing a predicted label related to __Oxidoreductases__. It serves as one of the target variables for prediction.
 
-34. __EC2__ : EC2 is another binary feature representing a predicted label related to Transferases. It serves as another target variable for prediction.
+34. __EC2__ : EC2 is another binary feature representing a predicted label related to __Transferases__. It serves as another target variable for prediction.
 
 
+# Data cleaning
+
+## Removal of unnecessary variables
+
+In the first section, we will try to remove all the variables that will not be required for our analysis.
+
+```{r echo=TRUE}
+df_train <- df_train %>% select(-c("id","EC3","EC4","EC5","EC6"))
+```
+
+## Check for null values
+
+In this step, we will try to check for the presence of null values in the dataset.
+
+
+```{r missvis,fig.cap="Missingness in the dataset",fig.align='center'}
+gg_miss_var(df_train)
+```
+
+Based on the figure \@ref(fig:missvis), we can observe that
+
+<div class="alert alert-block alert-success">
+✅  The dataset does not contain any missing values. This indicates that we have a clean dataset which is ready for EDA and further analysis.
+</div>
+
+
+
+# Exploratory Data Analysis
+
+We can observe that there are a total of __32 variables__ in the current dataset !!! <code style="background:yellow;color:red">These are a lot more than what we would ideally like to analyse.</code> Such types of datasets require a special kind of analysis called as __High Dimensional Data Analysis__ which concentrate majorly on techniques such as clustering and pricipal component analysis to reduce the number of variables without completely losing data. While this is the right way to go about it, this notebook will however study the correlation of each variable and try to reduce the number of variables which are observed to show high multi-collinearity.
+
+
+## Correlation plot
+
+
+Let us understand how each of these variables correlate.
+
+```{r corrplot, fig.cap="Correlation plot",fig.align='center'}
+corrplot(cor(df_train),        # Correlation matrix
+         method = "number", # Correlation plot method
+         type = "full",    # Correlation plot style (also "upper" and "lower")
+         diag = TRUE,      # If TRUE (default), adds the diagonal
+         tl.col = "black", # Labels color
+         bg = "white",     # Background color
+         title = "Correlation plot",       # Main title
+         col = NULL,
+         number.cex = 0.4,
+         tl.cex = .5)
+
+```
+
+As we can observe from figure \@ref(fig:corrplot),
+
+<div class="alert alert-block alert-info">
+None of the variables have an <strong> unusually high correlation with EC1 or EC2 </strong>. However, we do observe multiple variables which have high correlation to each other. This pheonmenon is called <strong> multi-collinearity </strong>. Let us set a correlation threshold of 75%. Any variables with correlation values higher than this will be dropped from the dataset.
+</div>
+
+```{r corrdrop,echo=TRUE}
+df_corr = cor(df_train)
+hc = findCorrelation(df_corr, cutoff=0.75) # Removing variables with greater than 75% correlation
+hc = sort(hc)
+df_train_new = df_train[,-c(hc)]
+```
+
+Now that we have removed the variables that observed to show multi-collinearity, let us now see how the revised dataset looks like.
+
+```{r}
+head(df_train_new) %>%
+DT::datatable(width = 500, height = 500, options = list(pageLength = 6))
+```
+
+Let us now create the correlation plot of the revised dataset.
+
+```{r corrplotnew, fig.cap="Correlation plot of revised dataset",fig.align='center'}
+corrplot(cor(df_train_new),        # Correlation matrix
+         method = "number", # Correlation plot method
+         type = "full",    # Correlation plot style (also "upper" and "lower")
+         diag = TRUE,      # If TRUE (default), adds the diagonal
+         tl.col = "black", # Labels color
+         bg = "white",     # Background color
+         title = " ",       # Main title
+         col = NULL,
+         number.cex = 0.6,
+         tl.cex = .5)
+
+```
+Figure \@ref(fig:corrplotnew)
+
+## Univariate analysis
+
+Now that we have figured out the variables of interest, we will perform a univariate analysis of the revised dataset.
