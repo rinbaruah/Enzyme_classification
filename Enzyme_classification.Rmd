@@ -4,10 +4,10 @@ author: "Arindam Baruah"
 date: "2023-06-13"
 output:
   bookdown::html_document2:
-   
     toc: false
-    toc_float: true
-    theme: united
+    toc_float: false
+    theme: readable
+
 ---
 
 ```{r setup, include=FALSE}
@@ -15,4 +15,140 @@ knitr::opts_chunk$set(echo = TRUE,
                       message = FALSE,
                       warning = FALSE)
 ```
+
+
+# Introduction
+
+<div class="warning" style='background-color:#E9D8FD; color: #69337A; border-left: solid #805AD5 4px; border-radius: 4px; padding:0.7em;'>
+<span>
+<p style='margin-top:1em; text-align:center'>
+<b>What are we trying to study ?</b></p>
+<p style='margin-left:1em;'>
+The Enzyme Commission (EC) system is a widely accepted classification system used to categorize enzymes based on their catalytic activities. Enzymes play crucial roles in biological processes by accelerating chemical reactions and facilitating various metabolic pathways within living organisms. The EC system assigns a unique EC number to each enzyme, which provides valuable information about its function and specificity.
+
+EC1 represents the class of enzymes known as oxidoreductases. These enzymes catalyze oxidation-reduction reactions, which involve the transfer of electrons between molecules. Oxidoreductases are involved in a wide range of biological processes, including energy production, biosynthesis, and detoxification. Examples of oxidoreductases include dehydrogenases, oxidases, reductases, and peroxidases.<br> </br>
+    The <b> Enzyme Commission (EC) </b> system provides a systematic and standardized approach for classifying enzymes based on their catalytic activities. EC1 represents the class of oxidoreductases, which participate in oxidation-reduction reactions, while the second digit in the EC number provides more specific information about the enzyme's function. This classification system facilitates the study of enzymes and helps researchers gain insights into their structure, function, and potential applications in various fields, including medicine, biotechnology, and industrial processes.
+</p>
+<p style='margin-bottom:1em; margin-right:1em; text-align:right; font-family:Georgia'> <b> - The internet </b> <i></i>
+</p></span>
+</div>
+
+
+# Importing the relevant libraries and dataset 🛠️
+
+First, we import the required libraries which we will use to perform the current analysis.
+
+```{r}
+library(tidyverse)
+library(naniar)
+library(bookdown)
+library(stringr)
+library(stringi)
+library(lubridate)
+library(DT)
+library(forcats)
+library(ggthemes)
+library(corrplot)
+library(mltools)
+library(data.table)
+library(visdat)
+library(janitor)
+library(cowplot)
+library(caTools)
+library(pscl)
+library(ROCR)
+library(caret)
+library(xgboost)
+library(randomForest)
+library(lightgbm)
+library(Matrix)
+library(catboost)
+library(magrittr)
+```
+
+
+Great ! We have all the libraries loaded. Next, we are gonna load the required dataset for conducting the enzyme classification analysis. 
+
+We will use one dataset for the purpose of exploratory data analysis and training the classification model while the test dataset for testing the classification model on a completely new dataset.
+
+
+After reading the data, let us see how the train dataset looks like.
+
+```{r read-data}
+
+df_train <- read_csv("data/train.csv")
+df_test <-  read_csv("data/test.csv")
+head(df_train)
+```
+
+We can observe that there are multiple process parameters present in the dataset which can help us analyse and predict the values of __EC1 and EC2__. But what do all these variables tell us ? Based on the information from [Panmie's Kaggle notebook](https://www.kaggle.com/code/tumpanjawat/s3e18-eda-cluster-ensemble-ada-cat-gb/notebook), following are the explanations of each of these variables.
+
+1. __Id__: This feature represents the identifier or unique identification number of a molecule. It serves as a reference but doesn't directly contribute to the predictive model.
+
+2. __BertzCT__: This feature corresponds to the Bertz complexity index, which measures the structural complexity of a molecule. It can provide insights into the intricacy of molecular structures.
+
+3. __Chi1__ : The Chi1 feature denotes the 1st order molecular connectivity index, which describes the topological connectivity of atoms in a molecule. It characterizes the atomic bonding pattern within the molecule.
+
+4. __Chi1n__ : This feature is the normalized version of the Chi1 index. It allows for standardized comparisons of the 1st order molecular connectivity across different molecules.
+
+5. __Chi1v__ : The Chi1v feature represents the 1st order molecular variance connectivity index. It captures the variance or diversity in the connectivity of atoms within a molecule.
+
+6. __Chi2n__ : The Chi2n feature indicates the 2nd order molecular connectivity index, which provides information about the extended connectivity of atoms in a molecule. It considers the neighboring atoms of each atom in the molecule.
+
+7. __Chi2v__ : Similar to Chi2n, the Chi2v feature measures the variance or diversity in the extended connectivity of atoms within a molecule at the 2nd order level.
+
+8. __Chi3v__ : The Chi3v feature represents the 3rd order molecular variance connectivity index. It captures the variance in the 3rd order connectivity patterns among atoms in a molecule.
+
+9. __Chi4n__ : This feature corresponds to the 4th order molecular connectivity index, which provides information about the extended connectivity of atoms in a molecule. The Chi4n index is normalized to allow for consistent comparisons across molecules.
+
+10. __EState_VSA1__ : EState_VSA1 is a feature that relates to the electrotopological state of a molecule. Specifically, it represents the Van der Waals surface area contribution for a specific atom type, contributing to the overall electrotopological state.
+
+11. __EState_VSA2__ : Similar to EState_VSA1, EState_VSA2 also represents the electrotopological state but for a different specific atom type.
+
+12. __ExactMolWt__ : This feature denotes the exact molecular weight of a molecule. It provides an accurate measurement of the mass of the molecule.
+
+13. __FpDensityMorgan1__ : FpDensityMorgan1 represents the Morgan fingerprint density for a specific radius of 1. Morgan fingerprints are a method for generating molecular fingerprints, and this feature captures the density of those fingerprints.
+
+14. __FpDensityMorgan2__ : Similar to FpDensityMorgan1, this feature represents the Morgan fingerprint density for a specific radius of 2.
+
+15. __FpDensityMorgan3__ : FpDensityMorgan3 corresponds to the Morgan fingerprint density for a specific radius of 3.
+
+16. __HallkierAlpha__ : The HallkierAlpha feature denotes the Hall-Kier alpha value for a molecule. It is a measure of molecular shape and can provide insights into the overall structure of the molecule.
+
+17. __HeavyAtomMolWt__ : This feature represents the molecular weight of heavy atoms only, excluding hydrogen atoms. It focuses on the mass of non-hydrogen atoms within the molecule.
+
+18. __Kappa3__ : The Kappa3 feature corresponds to the Hall-Kier Kappa3 value, which is a molecular shape descriptor. It provides information about the shape and spatial arrangement of atoms within the molecule.
+
+19. __MaxAbsEStateIndex__ : This feature represents the maximum absolute value of the E-state index. The E-state index relates to the electronic properties of a molecule, and its maximum absolute value can indicate the presence of specific electronic characteristics.
+
+20. __MinEStateIndex__ : MinEStateIndex denotes the minimum value of the E-state index. It provides information about the lowest observed electronic property value within the molecule.
+
+21. __NumHeteroatoms__ : This feature indicates the number of heteroatoms present in a molecule. Heteroatoms are atoms other than carbon and hydrogen, such as oxygen, nitrogen, sulfur, etc. This feature provides insights into the diversity and composition of atoms within the molecule.
+
+22. __PEOE_VSA10__ : PEOE_VSA10 represents the partial equalization of orbital electronegativity Van der Waals surface area contribution for a specific atom type. It captures the surface area contribution of a particular atom type to the overall electrostatic properties.
+
+23. __PEOE_VSA14__ : Similar to PEOE_VSA10, PEOE_VSA14 also represents the partial equalization of orbital electronegativity Van der Waals surface area contribution for a specific atom type.
+
+24. __PEOE_VSA6__ : This feature corresponds to the partial equalization of orbital electronegativity Van der Waals surface area contribution for a specific atom type at a different level.
+
+25. __PEOE_VSA7__ : Similar to PEOE_VSA6, PEOE_VSA7 represents the partial equalization of orbital electronegativity Van der Waals surface area contribution for a specific atom type.
+
+26. __PEOE_VSA8__ : PEOE_VSA8 denotes the partial equalization of orbital electronegativity Van der Waals surface area contribution for a specific atom type.
+
+27. __SMR_VSA10__ : SMR_VSA10 represents the solvent-accessible surface area Van der Waals surface area contribution for a specific atom type. It captures the contribution of a specific atom type to the solvent-accessible surface area.
+
+28. __SMR_VSA5__ : Similar to SMR_VSA10, this feature denotes the solvent-accessible surface area Van der Waals surface area contribution for a specific atom type at a different level.
+
+29. __SlogP_VSA3__ : The SlogP_VSA3 feature represents the LogP-based surface area contribution. It captures the contribution of a specific atom type to the surface area based on its logarithmic partition coefficient.
+
+30. __VSA_EState9__ : This feature denotes the E-state fragment contribution for the Van der Waals surface area calculation. It captures the fragment-specific contribution to the electrostatic properties of the molecule.
+
+31. __fr_COO__ : The fr_COO feature represents the number of carboxyl (COO) functional groups present in the molecule. It ranges from 0 to 8, providing insights into the presence and abundance of carboxyl groups.
+
+32. __fr_COO2__ : Similar to fr_COO, fr_COO2 represents the number of carboxyl (COO) functional groups, ranging from 0 to 8.
+
+33. __EC1__ : EC1 is a binary feature representing a predicted label related to Oxidoreductases. It serves as one of the target variables for prediction.
+
+34. __EC2__ : EC2 is another binary feature representing a predicted label related to Transferases. It serves as another target variable for prediction.
+
 
