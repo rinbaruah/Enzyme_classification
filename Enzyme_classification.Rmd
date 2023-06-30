@@ -240,8 +240,49 @@ corrplot(cor(df_train_new),        # Correlation matrix
          tl.cex = .5)
 
 ```
-Figure \@ref(fig:corrplotnew)
+Figure \@ref(fig:corrplotnew) depicts the correlation values of all the variables which do not observe to demonstrate multi-collinearity.
 
 ## Univariate analysis
 
-Now that we have figured out the variables of interest, we will perform a univariate analysis of the revised dataset.
+Now that we have figured out the variables of interest, we will perform a univariate analysis of the revised dataset. One of the best ways to study the overall distribution of the variables is through a faceted histogram. Let us dive deeper.
+
+```{r facethist,fig.cap="Univariate analysis of variables",fig.align='center'}
+
+
+pl1 <- ggplot(data = gather(df_train_new), aes(x = value,fill = factor(key))) + geom_histogram() + facet_wrap(~key,scales ="free_x") + theme_classic() + ggtitle("Univariate analysis of variables") + theme(legend.position = "none",plot.title = element_text(hjust = 0.5)) + labs(y="Number of instances",x = "Value of variable")
+pl1
+
+```
+
+Based on our analysis of figure \@ref(fig:facethist), we can observe that 
+
+<div class="alert alert-block alert-warning">
+while most variables range over a large scale in the X-axis, certain variables, namely <b> FpDensityMorgan1 </b> and <b> Kappa3 </b> range over a very small scale on the X-axis. This indicates that there is a large scale difference among the various variables. Hence, the dataset could benefit from standardisation technique at a later point of the analysis.
+</div>
+
+## Multi-variate analysis
+
+Now that we have performed a univariate analysis, it is now time to perform a multi-variate analysis to understand our variables better.
+
+## FpDensityMorgan1 and Kappa3
+
+Let us observe how do these variables differ for each values of EC.
+
+```{r KappVMorgEC1,fig.cap="Kappa3 Vs FpDensityMorgan1 for EC1",fig.align='center'}
+pl2 <- ggplot(data = df_train_new %>% filter(FpDensityMorgan1 > -5), aes(x =FpDensityMorgan1, y=Kappa3)) + geom_point(aes(color = factor(EC1))) + theme_classic() + labs(color = "EC1 indicator")
+pl2
+
+```
+
+
+```{r KappVMorgEC2,fig.cap="Kappa3 Vs FpDensityMorgan1 for EC1",fig.align='center'}
+pl2 <- ggplot(data = df_train_new %>% filter(FpDensityMorgan1 > -5), aes(x =FpDensityMorgan1, y=Kappa3)) + geom_point(aes(color = factor(EC2))) + theme_classic() + labs(color = "EC2 indicator")
+pl2
+
+```
+
+Based on the analysis from figures \@ref(fig:KappVMorgEC1) and \@ref(fig:KappVMorgEC2), we can observe that 
+
+<div class="alert alert-block alert-warning">
+Most values of Kappa3 lie around 0 for both EC1 and EC2. There are very datapoints which are higher than 0. Hence, majority of the datapoints can be clustered into one group.
+</div>
