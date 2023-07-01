@@ -257,7 +257,7 @@ pl1
 Based on our analysis of figure \@ref(fig:facethist), we can observe that 
 
 <div class="alert alert-block alert-warning">
-while most variables range over a large scale in the X-axis, certain variables, namely <b> FpDensityMorgan1 </b> and <b> Kappa3 </b> range over a very small scale on the X-axis. This indicates that there is a large scale difference among the various variables. Hence, the dataset could benefit from standardisation technique at a later point of the analysis.
+while most variables range over a large scale in the X-axis, certain variables, namely <b> FpDensityMorgan1 </b> and <b> Kappa3 </b> range over a very small scale on the X-axis. This indicates that there is a large scale difference among the various variables. Hence, the dataset could benefit from <b>standardisation technique</b> at a later point of the analysis.
 </div>
 
 ## Multi-variate analysis
@@ -284,5 +284,87 @@ pl2
 Based on the analysis from figures \@ref(fig:KappVMorgEC1) and \@ref(fig:KappVMorgEC2), we can observe that 
 
 <div class="alert alert-block alert-warning">
-Most values of Kappa3 lie around 0 for both EC1 and EC2. There are very datapoints which are higher than 0. Hence, majority of the datapoints can be clustered into one group.
+💡Most values of Kappa3 lie around 0 for both EC1 and EC2. There are very few datapoints which are higher than 0. Hence, majority of the datapoints can be clustered into one group.💡
+</div>
+
+## EState_VSA2 and PEOE_VSA8
+
+These variables were observed to have a fair amount of correlation to each other. Let us try to visualise these parameters.
+
+```{r EStateVSA8EC1, fig.cap="EState_VSA2 Vs PEOE_VSA8 for EC1",fig.align='center'}
+pl3 <- ggplot(data = df_train_new, aes(x = EState_VSA2, y= PEOE_VSA8,color = factor(EC1))) + geom_point() + theme_classic() + labs(color = "EC1 indicator")
+pl3
+```
+```{r EStateVSA8EC2, fig.cap="EState_VSA2 Vs PEOE_VSA8 for EC2",fig.align='center'}
+pl4 <- ggplot(data = df_train_new, aes(x = EState_VSA2, y= PEOE_VSA8,color = factor(EC2))) + geom_point() + theme_classic() + labs(color = "EC2 indicator")
+pl4
+```
+
+Based on figures \@ref(fig:EStateVSA8EC1) and \@ref(fig:EStateVSA8EC2), we can observe that
+
+<div class="alert alert-block alert-warning">
+💡there is no strong relationship for the two variables in each of the indicators.💡
+</div>
+
+While we have reduced the number of variables for analysis, we still have a sizable number of variables to analyse. Let us instead plot the variable importance and choose the top 5 variables to study.
+
+
+## Feature importance
+
+To study feature importances, let us use the XGBoost algorithm.
+
+```{r sample,echo=TRUE}
+
+set.seed(101)
+df_train_new_EC1 <- df_train_new %>% select(-EC2)
+df_train_new_EC2 <- df_train_new %>% select(-EC1)
+
+sample_EC1=sample.split(df_train_new_EC1$EC1,SplitRatio=0.7)
+train_EC1=subset(df_train_new_EC1,sample_EC1==T)
+test_EC1=subset(df_train_new_EC1,sample_EC1==F)
+
+sample_EC2=sample.split(df_train_new_EC2$EC2,SplitRatio=0.7)
+train_EC2=subset(df_train_new_EC2,sample_EC2==T)
+test_EC2=subset(df_train_new_EC2,sample_EC2==F)
+
+```
+
+
+<div class="alert alert-block alert-success">
+🥳 Through the above code-chunk, we have successfully created separate train and test datasets for both the EC1 and EC2 indicators. The dataset is now ready for further processing.
+</div>
+
+```{r}
+xgb_model_EC1 <- xgboost(data = as.matrix(train_EC1 %>% select(-EC1)), label = as.matrix(train_EC1$EC1), 
+                     max.depth = 2, eta = 1, nthread = 2, nrounds = 2, objective = "binary:logistic")
+
+xgb_model_EC2 <- xgboost(data = as.matrix(train_EC2 %>% select(-EC2)), label = as.matrix(train_EC2$EC2), 
+                     max.depth = 2, eta = 1, nthread = 2, nrounds = 2, objective = "binary:logistic")
+```
+
+
+```{r feature-importance,echo=TRUE}
+xgb_EC1_importance <- xgb.importance(colnames(train_EC1 %>% select(-EC1)), model = xgb_model_EC1, 
+               data = as.matrix(train_EC1 %>% select(-EC1)), label = train_EC1$EC1)
+
+xgb_EC2_importance <- xgb.importance(colnames(train_EC2 %>% select(-EC2)), model = xgb_model_EC2, 
+               data = as.matrix(train_EC2 %>% select(-EC2)), label = train_EC2$EC2)
+```
+
+```{r featplotEC1,fig.cap="Feature importances for EC1 \n using XGBoost",fig.align='center'}
+pl5 <- ggplot(data =xgb_EC1_importance,aes(x = reorder(Feature,-Gain),y = round(Gain,2),fill=Feature)) + geom_col(color='black') + geom_label(aes(label = round(Gain,2))) + theme_classic() + ggtitle("Top 5 feature importances for EC1 \n using XGBoost") + labs(x = "Feature name",y = "Feature importance") + theme(plot.title = element_text(hjust = 0.5),legend.position = 'none',axis.title = element_text(face = 'bold'))
+pl5
+
+```
+
+```{r featplotEC2,fig.cap="Feature importances for EC2 \n using XGBoost",fig.align='center'}
+pl6 <- ggplot(data =xgb_EC2_importance,aes(x = reorder(Feature,-Gain),y = round(Gain,2),fill=Feature)) + geom_col(color='black') + geom_label(aes(label = round(Gain,2))) + theme_classic() + ggtitle("Top 5 feature importances for EC2 \n using XGBoost") + labs(x = "Feature name",y = "Feature importance") + theme(plot.title = element_text(hjust = 0.5),legend.position = 'none',axis.title = element_text(face = 'bold')) + scale_fill_brewer(palette = 'Accent')
+pl6
+
+```
+
+Based on figures \@ref(fig:featplotEC1) and \@ref(fig:featplotEC2), 
+
+<div class="alert alert-block alert-warning">
+💡 we have obtained the top 5 features using the XGBoost model for each of the EC1 and EC2 indicators. This will help us concetrate our EDA efforts only on the most important features.💡
 </div>
