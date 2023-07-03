@@ -366,5 +366,56 @@ pl6
 Based on figures \@ref(fig:featplotEC1) and \@ref(fig:featplotEC2), 
 
 <div class="alert alert-block alert-warning">
-💡 we have obtained the top 5 features using the XGBoost model for each of the EC1 and EC2 indicators. This will help us concetrate our EDA efforts only on the most important features.💡
+💡 we have obtained the top 5 features using the XGBoost model for each of the EC1 and EC2 indicators. This will help us concentrate our EDA efforts only on the most important features.💡
+</div>
+
+
+```{r radwrang}
+
+
+df_train_new_EC1_scaled <- as.data.frame(df_train_new_EC1 %>% filter(EC1 == 1) %>% scale(center=TRUE,scale=TRUE))
+EC1_imp <- as.data.frame(df_train_new_EC1_scaled %>% select(-EC1) %>%  summarise_all(median,na.rm=TRUE))
+
+EC1_imp <- rbind(rep(1,ncol(df_train_new_EC1_scaled -1)) , rep(-1,ncol(df_train_new_EC1_scaled -1)),EC1_imp)
+
+
+df_train_new_EC2_scaled <- as.data.frame(df_train_new_EC2 %>% filter(EC2 == 1) %>% scale(center=TRUE,scale=TRUE))
+EC2_imp <- as.data.frame(df_train_new_EC2_scaled %>% select(-EC2) %>%  summarise_all(median,na.rm=TRUE))
+
+EC2_imp <- rbind(rep(1,ncol(df_train_new_EC2_scaled -1)) , rep(-1,ncol(df_train_new_EC2_scaled -1)),EC2_imp)
+
+
+```
+
+
+
+
+```{r radplot,fig.cap="Median standaridised values for EC1 and EC2 indicators",fig.align='center'}
+EC_imp <- EC1_imp
+EC_imp <- rbind(EC1_imp,EC2_imp[3,])
+rownames(EC_imp) <- 1:nrow(EC_imp)
+
+
+areas <- c(rgb(1, 0, 0, 0.3),
+           rgb(0, 1, 0, 0.3))
+
+radarchart(EC_imp,
+           cglcol="black", cglty=1, axislabcol="black", caxislabels=seq(-1,1,0.25), cglwd=0.8,
+           pcol = 2:4,      # Color for each line
+           plwd = 4,        # Width for each line
+           plty = 1,        # Line type for each line
+           pfcol = areas,   # Color of the areas
+           vlcex=0.5      # Size of label
+           
+           )   
+
+legend("topright",
+       legend = paste(c("EC1","EC2")),
+       bty = "n", pch = 20, col = areas,
+       text.col = "grey25", pt.cex = 2)
+```
+After analysing \@ref(fig:radplot), we observe that
+
+<div class="alert alert-block alert-warning">
+💡 The median standardised values for both EC1 and EC2 indicators are very similar. The major difference however can be observed for the variable PEOE_VSA7. EC2 is observed to demonstrate a relatively lower scaled value when compared to EC1.💡
 </div>
