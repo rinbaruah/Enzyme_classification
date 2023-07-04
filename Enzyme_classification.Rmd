@@ -66,6 +66,7 @@ library(lightgbm)
 library(Matrix)
 library(catboost)
 library(magrittr)
+library(fmsb)
 ```
 
 
@@ -390,7 +391,7 @@ EC2_imp <- rbind(rep(1,ncol(df_train_new_EC2_scaled -1)) , rep(-1,ncol(df_train_
 
 
 
-```{r radplot,fig.cap="Median standaridised values for EC1 and EC2 indicators",fig.align='center'}
+```{r radplot,fig.cap="Median standaridised values for EC1 and EC2 indicators",fig.align='center',eval=TRUE}
 EC_imp <- EC1_imp
 EC_imp <- rbind(EC1_imp,EC2_imp[3,])
 rownames(EC_imp) <- 1:nrow(EC_imp)
@@ -400,7 +401,8 @@ areas <- c(rgb(1, 0, 0, 0.3),
            rgb(0, 1, 0, 0.3))
 
 radarchart(EC_imp,
-           cglcol="black", cglty=1, axislabcol="black", caxislabels=seq(-1,1,0.25), cglwd=0.8,
+           axistype = 1,
+           cglcol="black", cglty=1, axislabcol="black", caxislabels=seq(-1,1,0.5), cglwd=0.8,
            pcol = 2:4,      # Color for each line
            plwd = 4,        # Width for each line
            plty = 1,        # Line type for each line
