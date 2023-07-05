@@ -68,6 +68,7 @@ library(Matrix)
 library(catboost)
 library(magrittr)
 library(fmsb)
+library(gbm)
 ```
 
 
@@ -618,3 +619,109 @@ cm_xgb_EC2 <- confusionMatrix(factor(pred_xgb_EC2),factor(test_EC2$EC2))
 draw_confusion_matrix(cm_xgb_EC2)
 
 ```
+
+
+
+## Light GBM
+
+Let us see how does the LGBM  dataset perform on the current dataset.
+
+```{r include=FALSE}
+
+params = list(max_bin = 8,
+               learning_rate = 0.1,
+               objective = "binary",
+               n_estimators = 100,
+               max_depth = 3,
+               metric = 'auc_roc')
+
+trainm_EC1 = sparse.model.matrix(EC1~., data = train_EC1 )
+train_label_EC1 = train_EC1[,"EC1"]
+
+trainm_EC2 = sparse.model.matrix(EC2~., data = train_EC2 )
+train_label_EC2 = train_EC2[,"EC2"]
+
+train_matrix_EC1 = lgb.Dataset(data = as.matrix(trainm_EC1), label = train_label_EC1)
+train_matrix_EC2 = lgb.Dataset(data = as.matrix(trainm_EC2), label = train_label_EC2)
+
+model_lgb_EC1 = lightgbm(params = params, train_matrix_EC1, nrounds = 2000)
+model_lgb_EC2 = lightgbm(params = params, train_matrix_EC2, nrounds = 2000)
+```
+
+
+```{r cf-lgb1,fig.cap="Confusion matrix of the Light GB model for EC1",fig.align='center'}
+pred_lgb_EC1 = predict(model_lgb_EC1, as.matrix(test_EC1))
+pred_lgb_EC1 <- if_else(pred_lgb_EC1 > 0.5,1,0)
+cm_lgb_EC1 <- confusionMatrix(factor(pred_lgb_EC1),factor(test_EC1$EC1))
+draw_confusion_matrix(cm_lgb_EC1)
+```
+
+```{r cf-lgb2,fig.cap="Confusion matrix of the Light GB model for EC2",fig.align='center'}
+pred_lgb_EC2 = predict(model_lgb_EC2, as.matrix(test_EC2))
+pred_lgb_EC2 <- if_else(pred_lgb_EC2 > 0.5,1,0)
+cm_lgb_EC2 <- confusionMatrix(factor(pred_lgb_EC2),factor(test_EC2$EC2))
+draw_confusion_matrix(cm_lgb_EC2)
+```
+
+Judging from the confusion matrices in figures \@ref(fig:cf-lgb1) and \@ref(fig:cf:lgb2), 
+
+<div class="alert alert-block alert-warning">
+💡 The Light GBM model has been observed to lack precision for each of the indicators in this dataset.💡
+</div>
+
+
+
+
+# Running the model on the test dataset
+
+```{r test-data-prep,echo=TRUE}
+id <- df_test$id
+df_test <- df_test %>% select(-id)
+train_labels <- names(train_EC1[,1:ncol(train_EC1)-1])
+df_test <- df_test %>% select(train_labels) %>% scale(center = TRUE,scale = TRUE)
+
+```
+
+
+```{r logit-preds,echo=TRUE}
+fitted.resultsEC1 <- predict(model_logit_EC1,as.data.frame(df_test))
+fitted.resultsEC2 <- predict(model_logit_EC2,as.data.frame(df_test))
+fit.results <- as.data.frame(fitted.resultsEC1)
+fit.results <- cbind(fit.results,fitted.resultsEC2)
+fit.results <- cbind(id,fit.results)
+fit.results <- fit.results %>% rename(c("EC1"="fitted.resultsEC1","EC2" = "fitted.resultsEC2"))
+
+write_csv(fit.results,"Logistic_Reg_predictions_std.csv")
+```
+
+
+
+```{r}
+
+
+fitted.resultsEC1 <- predict(model_logit_EC1,as.data.frame(df_test))
+fitted.resultsEC2 <- predict(model_logit_EC2,as.data.frame(df_test))
+fit.results <- as.data.frame(fitted.resultsEC1)
+fit.results <- cbind(fit.results,fitted.resultsEC2)
+fit.results <- cbind(id,fit.results)
+fit.results <- fit.results %>% rename(c("EC1"="fitted.resultsEC1","EC2" = "fitted.resultsEC2"))
+
+
+write_csv(fit.results,"XGB_predictions.csv")
+
+
+```
+
+
+```{r lgb-preds,echo=TRUE}
+fitted.resultsEC1 <- predict(model_lgb_EC1,as.matrix(df_test),predict_disable_shape_check=TRUE)
+fitted.resultsEC2 <- predict(model_lgb_EC2,as.matrix(df_test),predict_disable_shape_check=TRUE)
+fit.results <- as.data.frame(fitted.resultsEC1)
+fit.results <- cbind(fit.results,fitted.resultsEC2)
+fit.results <- cbind(id,fit.results)
+fit.results <- fit.results %>% rename(c("EC1"="fitted.resultsEC1","EC2" = "fitted.resultsEC2"))
+
+write_csv(fit.results,"LGB_predictions.csv")
+```
+
+
