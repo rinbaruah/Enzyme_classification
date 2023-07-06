@@ -663,13 +663,79 @@ cm_lgb_EC2 <- confusionMatrix(factor(pred_lgb_EC2),factor(test_EC2$EC2))
 draw_confusion_matrix(cm_lgb_EC2)
 ```
 
-Judging from the confusion matrices in figures \@ref(fig:cf-lgb1) and \@ref(fig:cf:lgb2), 
+Judging from the confusion matrices in figures \@ref(fig:cf-lgb1) and \@ref(fig:cf-lgb2), 
 
 <div class="alert alert-block alert-warning">
 💡 The Light GBM model has been observed to lack precision for each of the indicators in this dataset.💡
 </div>
 
 
+## Gradient Boosted Decision Trees
+
+```{r gbmec1,fig.cap="Feature importance with GBDT for EC1",fig.align='center'}
+
+gbm_EC1=gbm(EC1~ . ,data = train_EC1,distribution = "gaussian",n.trees = 10000,
+                  shrinkage = 0.01, interaction.depth = 4)
+
+summary(gbm_EC1)
+```
+```{r gbmec2,fig.cap="Feature importance with GBDT for EC2",fig.align='center'}
+
+gbm_EC2=gbm(EC2~ .,data = train_EC2,distribution = "gaussian",n.trees = 10000,
+                  shrinkage = 0.01, interaction.depth = 4)
+
+summary(gbm_EC2)
+```
+
+```{r cf-gbd1,fig.cap="Confusion matrix of the Light GB model for EC1",fig.align='center'}
+pred_gbm_EC1 = predict(gbm_EC1, test_EC1)
+pred_gbm_EC1 <- if_else(pred_gbm_EC1 > 0.5,1,0)
+cm_gbm_EC1 <- confusionMatrix(factor(pred_gbm_EC1),factor(test_EC1$EC1))
+draw_confusion_matrix(cm_gbm_EC1)
+```
+
+```{r cf-gbd2,fig.cap="Confusion matrix of the Light GB model for EC1",fig.align='center'}
+pred_gbm_EC2 = predict(gbm_EC2, test_EC2)
+pred_gbm_EC2 <- if_else(pred_gbm_EC2 > 0.5,1,0)
+cm_gbm_EC2 <- confusionMatrix(factor(pred_gbm_EC2),factor(test_EC2$EC2))
+draw_confusion_matrix(cm_gbm_EC2)
+```
+
+## Random Forest
+
+Let us use an ensemble algorithm to classify our results. We shall utilise the Random Forest technique which utilises multiple decision trees to predict results.
+
+```{r rand-forest}
+
+rf_model_EC1<-randomForest(EC1~.,data=train_EC1)
+rf_model_EC2<-randomForest(EC2~.,data=train_EC2)
+
+```
+
+```{r errormod,fig.cap="Error vs Number of trees for Random Forest for EC1",fig.align='center'}
+plot(rf_model_EC1)
+```
+
+
+```{r errormod1,fig.cap="Error vs Number of trees for Random Forest for EC1",fig.align='center'}
+plot(rf_model_EC2)
+```
+
+```{r conf-mat-rf1,fig.cap="Confusion matrix of the random forest model for EC1",fig.align='center'}
+pred_rf_EC1 <- predict(rf_model_EC1,test_EC1, type = 'class')
+pred_rf_EC1 <- if_else(pred_rf_EC1 > 0.5,1,0)
+cm_rf <- confusionMatrix(factor(pred_rf_EC1),factor(test_EC1$EC1))
+draw_confusion_matrix(cm_rf)
+
+```
+
+```{r conf-mat-rf2,fig.cap="Confusion matrix of the random forest model for EC2",fig.align='center'}
+pred_rf_EC2 <- predict(rf_model_EC2,test_EC2, type = 'class')
+pred_rf_EC2 <- if_else(pred_rf_EC2 > 0.5,1,0)
+cm_rf <- confusionMatrix(factor(pred_rf_EC2),factor(test_EC2$EC2))
+draw_confusion_matrix(cm_rf)
+
+```
 
 
 # Running the model on the test dataset
@@ -713,6 +779,9 @@ write_csv(fit.results,"XGB_predictions.csv")
 ```
 
 
+
+
+
 ```{r lgb-preds,echo=TRUE}
 fitted.resultsEC1 <- predict(model_lgb_EC1,as.matrix(df_test),predict_disable_shape_check=TRUE)
 fitted.resultsEC2 <- predict(model_lgb_EC2,as.matrix(df_test),predict_disable_shape_check=TRUE)
@@ -725,3 +794,25 @@ write_csv(fit.results,"LGB_predictions.csv")
 ```
 
 
+```{r gbm-preds,echo=TRUE}
+fitted.resultsEC1 <- predict(gbm_EC1,as.data.frame(df_test))
+fitted.resultsEC2 <- predict(gbm_EC2,as.data.frame(df_test))
+fit.results <- as.data.frame(fitted.resultsEC1)
+fit.results <- cbind(fit.results,fitted.resultsEC2)
+fit.results <- cbind(id,fit.results)
+fit.results <- fit.results %>% rename(c("EC1"="fitted.resultsEC1","EC2" = "fitted.resultsEC2"))
+
+write_csv(fit.results,"GBM_predictions.csv")
+```
+
+
+```{r rf-preds,echo=TRUE}
+fitted.resultsEC1 <- predict(rf_model_EC1,as.data.frame(df_test))
+fitted.resultsEC2 <- predict(rf_model_EC2,as.data.frame(df_test))
+fit.results <- as.data.frame(fitted.resultsEC1)
+fit.results <- cbind(fit.results,fitted.resultsEC2)
+fit.results <- cbind(id,fit.results)
+fit.results <- fit.results %>% rename(c("EC1"="fitted.resultsEC1","EC2" = "fitted.resultsEC2"))
+
+write_csv(fit.results,"RF_predictions.csv")
+```
